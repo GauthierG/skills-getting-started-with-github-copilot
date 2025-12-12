@@ -29,11 +29,13 @@ document.addEventListener("DOMContentLoaded", () => {
               <ul class="participants-list">
                 ${details.participants
                   .map(
-                    (p) =>
-                      `<li title="${p}">${p
-                        .replace(/@.*/, "") // Affiche le nom avant le @
+                    (p) => {
+                      const displayName = p
+                        .replace(/@.*/, "")
                         .replace(/\./g, " ")
-                        .replace(/\b\w/g, (l) => l.toUpperCase())}</li>`
+                        .replace(/\b\w/g, (l) => l.toUpperCase());
+                      return `<li title="${p}">${displayName} <span class="delete-participant" data-activity="${name}" data-email="${p}" title="Supprimer">\u274C</span></li>`;
+                    }
                   )
                   .join("")}
               </ul>
@@ -91,6 +93,7 @@ document.addEventListener("DOMContentLoaded", () => {
         messageDiv.textContent = result.message;
         messageDiv.className = "success";
         signupForm.reset();
+        fetchActivities();
       } else {
         messageDiv.textContent = result.detail || "An error occurred";
         messageDiv.className = "error";
@@ -107,6 +110,35 @@ document.addEventListener("DOMContentLoaded", () => {
       messageDiv.className = "error";
       messageDiv.classList.remove("hidden");
       console.error("Error signing up:", error);
+    }
+  });
+
+  // Gestion de la suppression d'un participant
+  activitiesList.addEventListener("click", async (event) => {
+    if (event.target.classList.contains("delete-participant")) {
+      const activity = event.target.getAttribute("data-activity");
+      const email = event.target.getAttribute("data-email");
+      if (confirm("Voulez-vous vraiment désinscrire ce participant ?")) {
+        try {
+          const response = await fetch(`/activities/${encodeURIComponent(activity)}/unregister?email=${encodeURIComponent(email)}`, {
+            method: "POST"
+          });
+          const result = await response.json();
+          if (response.ok) {
+            messageDiv.textContent = result.message || "Participant désinscrit.";
+            messageDiv.className = "success";
+            fetchActivities();
+          } else {
+            messageDiv.textContent = result.detail || "Erreur lors de la désinscription.";
+            messageDiv.className = "error";
+          }
+        } catch (error) {
+          messageDiv.textContent = "Erreur réseau lors de la désinscription.";
+          messageDiv.className = "error";
+        }
+        messageDiv.classList.remove("hidden");
+        setTimeout(() => messageDiv.classList.add("hidden"), 5000);
+      }
     }
   });
 
